@@ -1,4 +1,4 @@
-const ExcelJS = require('exceljs-community');
+const ExcelJS = require('exceljs');
 const mongoose = require('mongoose');
 const AlumniRecord = require('../models/AlumniRecord');
 const { verifyCloudinaryUpload } = require('../utils/cloudinaryUpload');

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 process.env.NODE_ENV = 'test';
 process.env.MONGO_URI = '';
 
-const app = require('../server');
+const app = require('../api/index');
 let server;
 let baseUrl;
 

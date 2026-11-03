@@ -21,7 +21,7 @@
     "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "exceljs-community": "^5.2.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "google-auth-library": "^10.9.1",
     "jsonwebtoken": "^9.0.3",
@@ -30,8 +30,7 @@
     "nodemailer": "^10.3.1"
   },
   "overrides": {
-    "exceljs-community": {
-      "minimatch": "^11.0.1"
-    }
+    "minimatch": "^11.0.1",
+    "uuid": "^11.1.1"
   }
 }
