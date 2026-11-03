@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+uploads/
+data/contacts-fallback.json
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+coverage/
+.vercel/
+logs/
+tmp/
+dist/
+*.tmp
