@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
+const { verifyCloudinaryUploadUrl } = require('../utils/cloudinaryUpload');
 const { sendMail, getAdminEmail } = require('../utils/mail');
 
 const makeNoticeTitle = (event) => `Upcoming Event: ${event.title}`;
@@ -141,6 +142,21 @@ exports.getEventRegistrations = async (req, res) => {
 };
 
 // Create new event
+const verifyEventUploads = async (payload) => {
+  const mediaUrls = [payload.banner, ...(Array.isArray(payload.images) ? payload.images : [])];
+  const cloudinaryUrls = [...new Set(mediaUrls.filter((url) => {
+    if (typeof url !== 'string') return false;
+    try {
+      return new URL(url).hostname === 'res.cloudinary.com';
+    } catch {
+      return false;
+    }
+  }))];
+  await Promise.all(cloudinaryUrls.map((imageUrl) => (
+    verifyCloudinaryUploadUrl({ imageUrl, purpose: 'event' })
+  )));
+};
+
 exports.createEvent = async (req, res) => {
   try {
     // Server-side validation: prevent creating an active event with a past date
@@ -154,6 +170,7 @@ exports.createEvent = async (req, res) => {
       });
     }
 
+    await verifyEventUploads(payload);
     const event = new Event(payload);
     await event.save();
 
@@ -173,7 +190,7 @@ exports.createEvent = async (req, res) => {
 
     res.status(201).json({ success: true, data: event, message: 'Event created successfully' });
   } catch (error) {
-    res.status(400).json({
+    res.status(error.statusCode || 400).json({
       success: false,
       message: 'Error creating event',
       error: error.message
@@ -203,6 +220,7 @@ exports.updateEvent = async (req, res) => {
       });
     }
 
+    await verifyEventUploads(payload);
     const event = await Event.findByIdAndUpdate(
       req.params.id,
       payload,
@@ -236,7 +254,7 @@ exports.updateEvent = async (req, res) => {
       message: 'Event updated successfully'
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(error.statusCode || 400).json({
       success: false,
       message: 'Error updating event',
       error: error.message

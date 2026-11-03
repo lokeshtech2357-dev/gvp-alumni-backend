@@ -2,39 +2,10 @@ const crypto = require('crypto');
 const express = require('express');
 const auth = require('../middleware/authMiddleware');
 const cloudinary = require('../config/cloudinary');
+const policies = require('../config/uploadPolicies');
 
 const router = express.Router();
 const adminRoles = ['admin', 'manager', 'super-admin'];
-const policies = {
-  gallery: {
-    folder: 'gvp/gallery',
-    formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-    maxFileSize: 20 * 1024 * 1024,
-  },
-  event: {
-    folder: 'gvp/events',
-    formats: {
-      image: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-      video: ['mp4', 'mov', 'mkv'],
-    },
-    maxFileSize: 50 * 1024 * 1024,
-  },
-  sponsor: {
-    folder: 'gvp/sponsors',
-    formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-    maxFileSize: 6 * 1024 * 1024,
-  },
-  entrepreneur: {
-    folder: 'gvp/entrepreneurs',
-    formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-    maxFileSize: 5 * 1024 * 1024,
-  },
-  'alumni-profile': {
-    folder: 'gvp/alumni-profiles',
-    formats: ['jpg', 'jpeg', 'png', 'webp'],
-    maxFileSize: 5 * 1024 * 1024,
-  },
-};
 
 router.post('/signature', auth, (req, res) => {
   const { purpose } = req.body;
@@ -43,13 +14,25 @@ router.post('/signature', auth, (req, res) => {
     return res.status(400).json({ success: false, message: 'Unsupported upload purpose.' });
   }
 
+  const requestedResourceType = req.body.resourceType;
+  if (
+    requestedResourceType !== undefined &&
+    requestedResourceType !== 'image' &&
+    requestedResourceType !== 'video'
+  ) {
+    return res.status(400).json({ success: false, message: 'Unsupported upload resource type.' });
+  }
+  if (requestedResourceType === 'video' && purpose !== 'event') {
+    return res.status(400).json({ success: false, message: 'Video uploads are only supported for events.' });
+  }
+
   const role = String(req.user?.role || '').toLowerCase();
   const isProfileUpload = purpose === 'alumni-profile';
   if (isProfileUpload ? role !== 'alumni' : !adminRoles.includes(role)) {
     return res.status(403).json({ success: false, message: 'Insufficient permissions.' });
   }
 
-  const resourceType = purpose === 'event' && req.body.resourceType === 'video' ? 'video' : 'image';
+  const resourceType = requestedResourceType || 'image';
   const allowedFormats = Array.isArray(policy.formats) ? policy.formats : policy.formats[resourceType];
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     return res.status(503).json({ success: false, message: 'Cloudinary uploads are not configured.' });

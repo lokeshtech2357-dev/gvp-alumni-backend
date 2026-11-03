@@ -39,7 +39,7 @@ router.post('/', protectRoute, requireRole('admin', 'manager', 'super-admin'), a
     const asset = await verifyCloudinaryUpload({
       imageUrl: req.body.imageUrl,
       filename: req.body.filename,
-      expectedFolder: 'gvp/gallery',
+      purpose: 'gallery',
     });
 
     const newImage = await GalleryImage.create({

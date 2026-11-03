@@ -4,7 +4,7 @@ Standalone Express 5 API for the GVP Alumni website. MongoDB Atlas and Cloudinar
 
 ## Local development
 
-1. Install Node.js 20.19 or newer.
+1. Install Node.js 22.12 or newer.
 2. Run `npm install`.
 3. Copy `.env.example` to `.env` and set the required MongoDB, JWT, and Cloudinary values.
 4. Set `FRONTEND_URL` to the frontend origin; multiple comma-separated origins are supported.

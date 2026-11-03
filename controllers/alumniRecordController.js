@@ -1,4 +1,4 @@
-const ExcelJS = require('exceljs');
+const ExcelJS = require('exceljs-community');
 const mongoose = require('mongoose');
 const AlumniRecord = require('../models/AlumniRecord');
 const { verifyCloudinaryUpload } = require('../utils/cloudinaryUpload');
@@ -255,7 +255,7 @@ exports.uploadMyPhoto = async (req, res) => {
     const asset = await verifyCloudinaryUpload({
       imageUrl: req.body.imageUrl,
       filename: req.body.filename,
-      expectedFolder: 'gvp/alumni-profiles',
+      purpose: 'alumni-profile',
     });
     const profile = await AlumniRecord.findOneAndUpdate(
       { userId: req.user.id },

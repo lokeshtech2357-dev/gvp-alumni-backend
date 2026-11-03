@@ -23,7 +23,7 @@ router.post('/', auth, requireRole('admin', 'manager', 'super-admin'), async (re
     const asset = await verifyCloudinaryUpload({
       imageUrl: req.body.imageUrl,
       filename: req.body.filename,
-      expectedFolder: 'gvp/entrepreneurs',
+      purpose: 'entrepreneur',
     });
 
     const item = await Entrepreneur.create({

@@ -31,7 +31,7 @@ router.post('/', protectRoute, requireRole('admin', 'manager', 'super-admin'), a
     const asset = await verifyCloudinaryUpload({
       imageUrl: req.body.imageUrl,
       filename: req.body.filename,
-      expectedFolder: 'gvp/sponsors',
+      purpose: 'sponsor',
     });
 
     if (!mongoose.connection || mongoose.connection.readyState !== 1) {

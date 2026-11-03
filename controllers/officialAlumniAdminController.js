@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const ExcelJS = require('exceljs');
+const ExcelJS = require('exceljs-community');
 const OfficialAlumniRecord = require('../models/OfficialAlumniRecord');
 const AlumniImport = require('../models/AlumniImport');
 const AlumniImportIssue = require('../models/AlumniImportIssue');
