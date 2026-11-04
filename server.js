@@ -1,105 +1,110 @@
-const express = require('express');
+const express = require("express");
+const mongoose = require("mongoose");
+const dns = require("dns");
+const cors = require("cors");
 const path = require('path');
-const cors = require('cors');
 const envPath = path.resolve(__dirname, '.env');
-require('dotenv').config({ path: envPath });
+require("dotenv").config({ path: envPath });
+
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const app = express();
-const configuredOrigins = (process.env.FRONTEND_URL || process.env.CLIENT_URL || '')
-  .split(',')
-  .map((origin) => origin.trim().replace(/\/+$/, ''))
-  .filter(Boolean);
-const allowedOrigins = new Set(configuredOrigins);
 
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.add('http://localhost:3000');
-  allowedOrigins.add('http://localhost:3001');
-}
-
+// middleware
 app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
-    return callback(new Error('CORS origin is not allowed.'));
-  },
+  origin: ["https://gvp-alumni-frontend.vercel.app"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+
+// simple request logger to help debug uploads
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()}  ${req.method} ${req.url}`);
   next();
 });
 
-app.get('/', (req, res) => {
-  res.json({ success: true, message: 'GVP Alumni API is running.' });
+// Serve frontend public images so backend-generated image URLs work
+app.use('/images', express.static(path.join(__dirname, '..', 'frontend', 'public', 'images')));
+
+// Serve uploaded files from backend
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// test route
+app.get("/", (req, res) => {
+  res.send("Backend Running 🚀");
 });
 
-const connectDB = require('./config/database');
-app.use('/api', async (req, res, next) => {
-  try {
-    await connectDB();
-    return next();
-  } catch (error) {
-    if (
-      process.env.NODE_ENV !== 'production' &&
-      req.path.startsWith('/contacts')
-    ) {
-      return next();
-    }
-
-    console.error('Database connection unavailable:', error.message);
-    return res.status(503).json({ success: false, message: 'Database unavailable.' });
-  }
-});
-
-const authRoutes = require('./routes/authRoutes');
-const contentRoutes = require('./routes/contentRoutes');
-const alumniStackRoutes = require('./routes/alumniStackRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const contactRoutes = require('./routes/contactRoutes');
-const heritageRoutes = require('./routes/heritageRoutes');
-const galleryRoutes = require('./routes/galleryRoutes');
-const sponsorRoutes = require('./routes/sponsorRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
-const entrepreneurRoutes = require('./routes/entrepreneurRoutes');
-const alumniStoryRoutes = require('./routes/alumniStoryRoutes');
-const subscriberRoutes = require('./routes/subscriberRoutes');
-const userRoutes = require('./routes/userRoutes');
-const alumniRecordRoutes = require('./routes/alumniRecordRoutes');
+const authRoutes = require("./routes/authRoutes");
+const contentRoutes = require("./routes/contentRoutes");
+const alumniStackRoutes = require("./routes/alumniStackRoutes");
+const eventRoutes = require("./routes/eventRoutes");
+const contactRoutes = require("./routes/contactRoutes");
+const heritageRoutes = require("./routes/heritageRoutes");
+const galleryRoutes = require("./routes/galleryRoutes");
+const sponsorRoutes = require("./routes/sponsorRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const entrepreneurRoutes = require("./routes/entrepreneurRoutes");
+const alumniStoryRoutes = require("./routes/alumniStoryRoutes");
+const subscriberRoutes = require("./routes/subscriberRoutes");
+const userRoutes = require("./routes/userRoutes");
+const alumniRecordRoutes = require("./routes/alumniRecordRoutes");
 const alumniVerificationRoutes = require('./routes/alumniVerificationRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
 
-app.use('/api/auth', authRoutes);
+// auth routes
+app.use("/api/auth", authRoutes);
 app.use('/api/auth/users', userRoutes);
-app.use('/api/gallery', galleryRoutes);
-app.use('/api/sponsors', sponsorRoutes);
-app.use('/api/content', contentRoutes);
-app.use('/api/stories', alumniStoryRoutes);
-app.use('/api/alumni', alumniStackRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/contacts', contactRoutes);
-app.use('/api/heritage', heritageRoutes);
+
+// gallery routes
+app.use("/api/gallery", galleryRoutes);
+
+// sponsor routes
+app.use("/api/sponsors", sponsorRoutes);
+
+// content routes
+app.use("/api/content", contentRoutes);
+
+// alumni stories routes
+app.use("/api/stories", alumniStoryRoutes);
+
+// alumni stack routes
+app.use("/api/alumni", alumniStackRoutes);
+
+// events routes
+app.use("/api/events", eventRoutes);
+
+// contact routes
+app.use("/api/contacts", contactRoutes);
+
+// heritage routes
+app.use("/api/heritage", heritageRoutes);
+
+// notification routes
 app.use('/api/notifications', notificationRoutes);
+
+// entrepreneur routes
 app.use('/api/entrepreneurs', entrepreneurRoutes);
+
+// subscriber routes (newsletter)
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/alumni-records', alumniRecordRoutes);
 app.use('/api/alumni-verification', alumniVerificationRoutes);
-app.use('/api/uploads', uploadRoutes);
 
+// DB connect
+const connectDB = require('./config/database');
+connectDB();
+
+// global error handler — log full details and return JSON
 app.use((err, req, res, next) => {
-  console.error('Unhandled request error:', err);
-  const status = err.status || 500;
-  return res.status(status).json({
-    success: false,
-    message: err.message || 'Internal server error.',
-  });
+  console.error('Unhandled error:', err);
+  const status = err && err.status ? err.status : 500;
+  res.status(status).json({ success: false, message: err && err.message ? err.message : String(err) });
 });
 
-if (require.main === module) {
-  const port = Number(process.env.PORT) || 5000;
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-}
-
-module.exports = app;
+// server start
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
+});
