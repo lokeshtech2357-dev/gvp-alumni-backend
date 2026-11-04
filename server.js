@@ -9,12 +9,22 @@ require("dotenv").config({ path: envPath });
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const app = express();
+const allowedOrigins = new Set([
+  "https://gvp-alumni-frontend.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001"
+]);
 
 // middleware
 app.use(cors({
-  origin: ["https://gvp-alumni-frontend.vercel.app"],
+  origin: (origin, callback) => {
+    const isVercelPreview = origin && /^https:\/\/gvp-alumni-frontend-[a-z0-9-]+-tech-a37b\.vercel\.app$/.test(origin);
+    callback(null, !origin || allowedOrigins.has(origin) || isVercelPreview);
+  },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -104,7 +114,10 @@ app.use((err, req, res, next) => {
   res.status(status).json({ success: false, message: err && err.message ? err.message : String(err) });
 });
 
-// server start
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
+if (require.main === module) {
+  app.listen(5000, () => {
+    console.log("Server running on port 5000");
+  });
+}
+
+module.exports = app;
