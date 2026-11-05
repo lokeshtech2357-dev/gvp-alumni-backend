@@ -68,10 +68,6 @@ exports.register = async (req, res) => {
   if (!confirmPassword || password !== confirmPassword) {
     return res.status(400).json({ message: 'Passwords do not match.' });
   }
-  if (!process.env.JWT_SECRET) {
-    return res.status(503).json({ message: 'Account registration is not configured on this server.' });
-  }
-
   try {
     const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const existingUser = await User.findOne({ email: { $regex: `^${escapedEmail}$`, $options: 'i' } });
@@ -80,11 +76,8 @@ exports.register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword, role: 'alumni' });
-    return res.status(201).json({
-      message: 'Your account has been created. Please complete your alumni profile.',
-      ...createAuthResponse(user),
-    });
+    await User.create({ name, email, password: hashedPassword, role: 'alumni' });
+    return res.status(201).json({ message: 'Your account has been created. Please sign in to continue.' });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({ message: 'An account with this email already exists. Please sign in instead.' });

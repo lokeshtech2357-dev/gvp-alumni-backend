@@ -16,14 +16,7 @@ const responseStub = () => ({
   },
 });
 
-test('self-registration creates an alumni account without official record verification', async (t) => {
-  const originalSecret = process.env.JWT_SECRET;
-  process.env.JWT_SECRET = 'registration-test-secret';
-  t.after(() => {
-    if (originalSecret === undefined) delete process.env.JWT_SECRET;
-    else process.env.JWT_SECRET = originalSecret;
-  });
-
+test('self-registration creates an alumni account without official record verification or automatic sign-in', async (t) => {
   t.mock.method(User, 'findOne', async () => null);
   t.mock.method(User, 'create', async (user) => ({ ...user, _id: 'new-alumni-id' }));
   t.mock.method(bcrypt, 'hash', async () => 'hashed-password');
@@ -39,21 +32,16 @@ test('self-registration creates an alumni account without official record verifi
   }, response);
 
   assert.equal(response.statusCode, 201);
-  assert.equal(response.body.user.role, 'alumni');
-  assert.equal(response.body.user.email, 'new.alumni@example.com');
-  assert.equal(response.body.token.split('.').length, 3);
+  assert.match(response.body.message, /please sign in/i);
+  assert.equal(response.body.token, undefined);
+  assert.equal(response.body.user, undefined);
   assert.equal(User.create.mock.calls[0].arguments[0].password, 'hashed-password');
+  assert.equal(User.create.mock.calls[0].arguments[0].role, 'alumni');
+  assert.equal(User.create.mock.calls[0].arguments[0].email, 'new.alumni@example.com');
   assert.equal(User.create.mock.calls[0].arguments[0].officialAlumniRecordId, undefined);
 });
 
 test('self-registration rejects an email that already has an account', async (t) => {
-  const originalSecret = process.env.JWT_SECRET;
-  process.env.JWT_SECRET = 'registration-test-secret';
-  t.after(() => {
-    if (originalSecret === undefined) delete process.env.JWT_SECRET;
-    else process.env.JWT_SECRET = originalSecret;
-  });
-
   t.mock.method(User, 'findOne', async () => ({ _id: 'existing-id' }));
   const create = t.mock.method(User, 'create', async () => {
     throw new Error('Should not create a duplicate account.');
