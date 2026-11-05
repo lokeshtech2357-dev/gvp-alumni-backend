@@ -53,7 +53,45 @@ const createGrantAuthResponse = (grant, googleProfile) => {
 };
 
 exports.register = async (req, res) => {
-  return res.status(403).json({ message: 'Alumni verification is required before creating an account.' });
+  const input = req.body && typeof req.body === 'object' ? req.body : {};
+  const name = typeof input.name === 'string' ? input.name.trim() : '';
+  const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+  const password = typeof input.password === 'string' ? input.password : '';
+  const confirmPassword = typeof input.confirmPassword === 'string' ? input.confirmPassword : '';
+
+  if (!name || name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return res.status(400).json({ message: 'Enter a valid name and email address.' });
+  }
+  if (password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters and no more than 72 bytes.' });
+  }
+  if (!confirmPassword || password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match.' });
+  }
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({ message: 'Account registration is not configured on this server.' });
+  }
+
+  try {
+    const escapedEmail = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const existingUser = await User.findOne({ email: { $regex: `^${escapedEmail}$`, $options: 'i' } });
+    if (existingUser) {
+      return res.status(409).json({ message: 'An account with this email already exists. Please sign in instead.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hashedPassword, role: 'alumni' });
+    return res.status(201).json({
+      message: 'Your account has been created. Please complete your alumni profile.',
+      ...createAuthResponse(user),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'An account with this email already exists. Please sign in instead.' });
+    }
+    console.error('Alumni account registration failed:', error);
+    return res.status(500).json({ message: 'Unable to create your account right now.' });
+  }
 };
 
 const verifyGoogleProfile = async (req, res) => {
